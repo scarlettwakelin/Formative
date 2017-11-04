@@ -119,7 +119,7 @@ class Raytrace:
           
         r += dr  # gone too far: move back
 ### MARKING coding 1
-        while(r < RE):
+        while(r <= RE):
 ### END MARKING
           V += self.T_Delta_Int(r, p, wave)*dr
 ### MARKING coding 1

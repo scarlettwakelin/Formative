@@ -93,16 +93,24 @@ class Raytrace:
         return (T, D)
 ### END MARKING
 
-    def Int(self, dr, p, wave):
+### MARKING: coding 2
+    def Int_common(self, dr, p, wave, mantel_wave_type, must_reach_outer_core, reflect_at_outer_core, convert_to_p_at_core):
         """ Integrate function T_Delta_Int from RE to bottom.
-        Save the values of r, Delta and wave in the class lists 'list_r', 
+        Save the values of r, Delta and wave in the class lists 'list_r',
         'list_th' and 'list_wave', used by 'plot_trajectory' to generate figures
         Return [T,Delta] for the path or [-1, 0] if the path does not exist.
 
         :param dr: radial step
         :param p : ray parameter
         :param wave : type of wave: 'P' or 'S'
+        :param mantel_wave_type : type of wave returning in mantel: 'P' or 'S'
+        :param must_reach_outer_core : wave must reach outer core: True or False
+        :param reflect_at_outer_core : wave reflects at outer core boundary: True or False
+        :param convert_to_p_at_core : convert wave to 'P' at outer core boundary: True or False
         """
+
+        print "New function called with wave in %c, wave out %c, must_reach_outer_core %d, reflect_at_outer_core %d, convert_to_p_at_core %d" % (wave, mantel_wave_type, must_reach_outer_core, reflect_at_outer_core, convert_to_p_at_core)
+
         V = np.array([0., 0.])
         r = RE
         self.list_r.append(r)
@@ -116,52 +124,57 @@ class Raytrace:
           self.list_r.append(r)
           self.list_th.append(V[1])
           self.list_wave.append(wave)
+          if reflect_at_outer_core and (r <= RM):
+            print "reflected at outer core"
+            break
+          if convert_to_p_at_core and (wave == "S") and (r <= RM):
+            wave = "P"
+            print "S wave now entering outer core, converted to %c at %f" % (wave, r)
           
+        if must_reach_outer_core and (r > RM):
+          print "ERROR wave turns back before outer core"
+          return(np.array([-1, 0]))
+
         r += dr  # gone too far: move back
-### MARKING coding 1
-        while(r < RE):
-### END MARKING
+
+        print "turned at %f / %f wave type now %c" % (r, RM, wave)
+
+        while(r <= RE):
+          if (wave != mantel_wave_type) and (r >= RM):
+            wave = mantel_wave_type
+            print "passed through core/mantel boundary wave type now %c at %f" % (wave, r)
           V += self.T_Delta_Int(r, p, wave)*dr
-### MARKING coding 1
           r += dr
-### END MARKING
           self.list_r.append(r)
           self.list_th.append(V[1])
           self.list_wave.append(wave)
           if((wave == "S") and (r < RM)): # no S wave in outer core
+            print "ERROR no S wave in outer core"
             return(np.array([-1, 0]))
 
         return(V)
     
-### MARKING: coding 2
-def Int_mPm(self, dr, p, wave):
-     V = np.array([0., 0.])
-        r = RE
-        self.list_r.append(r)
-        self.list_th.append(0)
-        self.list_wave.append(wave)
-        r+= dr*0.5 # move to middle of segment
+    def Int(self, dr, p, wave):
+        """ Integrate function T_Delta_Int from RE to bottom.
+        Save the values of r, Delta and wave in the class lists 'list_r',
+        'list_th' and 'list_wave', used by 'plot_trajectory' to generate figures
+        Return [T,Delta] for the path or [-1, 0] if the path does not exist.
 
-        while(r*self.u(r, wave) > p): # while still going down
-          V += self.T_Delta_Int(r, p, wave)*dr
-          r -= dr
-          self.list_r.append(r)
-          self.list_th.append(V[1])
-          self.list_wave.append(wave)
-          
-        r += dr  # gone too far: move back
+        :param dr: radial step
+        :param p : ray parameter
+        :param wave : type of wave: 'P' or 'S'
+        """
+        return self.Int_common(dr, p, wave, wave, False, False, False)
 
-        while(r < RE):
-            V += self.T_Delta_Int(r, p, wave)*dr
-            r += dr
-          self.list_r.append(r)
-          self.list_th.append(V[1])
-          self.list_wave.append(wave)
-          if((wave == "S") and (r < RM)): # no S wave in outer core
-            return(np.array([-1, 0]))
-        return(V)
-    #def Int_mSm(self, dr, p, wave):
-    #def Int_mPoSm(self, dr, p, wave):     
+    def Int_mPm(self, dr, p, wave):
+        return self.Int_common(dr, p, wave, 'P', True, True, False)
+
+    def Int_mSm(self, dr, p, wave):
+        return self.Int_common(dr, p, wave, 'S', True, True, False)
+
+    def Int_mPoSm(self, dr, p, wave):
+        return self.Int_common(dr, p, wave, 'S', True, False, True)
+
 ### END MARKING
 
 ### MARKING coding 1
@@ -190,7 +203,7 @@ def Int_mPm(self, dr, p, wave):
         #ax.cla() # clear things for fresh plot
         ax.add_artist(circle2)
 
-    def trajectory(self, theta, wave, dr):
+    def trajectory(self, theta, path, dr):
         """ Compute the trajectory of the specified wave 
             Return Traveling time and angle (T, Delta)
 
@@ -202,13 +215,25 @@ def Int_mPm(self, dr, p, wave):
         self.list_th = []
         self.list_wave = []
         self.theta=theta
-        self.path=wave
+        self.path=path
 
 ### MARKING coding 2
+        wave = path[:1]
+        func_to_call = path[1:]
+
         th = np.radians(theta)
         p = RE*self.u(RE, wave)*np.sin(th)
 
-        T, DeltaP = self.Int(dr, p, wave)
+        if func_to_call == "m":
+          T, DeltaP = self.Int(dr, p, wave)
+        elif func_to_call == "mPm":
+          T, DeltaP = self.Int_mPm(dr, p, wave)
+        elif func_to_call == "mSm":
+          T, DeltaP = self.Int_mSm(dr, p, wave)
+        elif func_to_call == "mPoSm":
+          T, DeltaP = self.Int_mPoSm(dr, p, wave)
+        else:
+          print "Failed to understand %s" % func_to_call
 ### END MARKING
 
         return(T, np.degrees(DeltaP))
