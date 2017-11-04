@@ -122,22 +122,23 @@ class Raytrace:
         r+= dr*0.5 # move to middle of segment
 
         while(r*self.u(r, wave) > p): # while still going down
-          if reflect_at_outer_core and (r <= RM):
-            if debug: print "reflected at outer core"
-            break
           V += self.T_Delta_Int(r, p, wave)*dr
           r -= dr
           self.list_r.append(r)
           self.list_th.append(V[1])
           self.list_wave.append(wave)
-          if (wave == "S") and (r <= RM):
-            if convert_to_p_at_core:
-              wave = "P"
-              if debug: print "S wave now entering outer core, converted to %c at %f" % (wave, r)
-            else:
-              if debug: print "ERROR no S wave in outer core"
-              return(np.array([-1, 0]))
-          
+          if r <= RM:
+            if reflect_at_outer_core:
+              if debug: print "reflected at outer core %f" % r
+              break
+            elif wave == "S":
+              if convert_to_p_at_core:
+                wave = "P"
+                if debug: print "S wave now entering outer core, converted to %c at %f" % (wave, r)
+              else:
+                if debug: print "ERROR no S wave in outer core %f" % r
+                return(np.array([-1, 0]))
+
         if must_reach_outer_core and (r > RM):
           if debug: print "ERROR wave turns back before outer core"
           return(np.array([-1, 0]))
@@ -150,6 +151,9 @@ class Raytrace:
           if (wave != mantel_wave_type) and (r >= RM):
             wave = mantel_wave_type
             if debug: print "passed through core/mantel boundary wave type now %c at %f" % (wave, r)
+            if r*self.u(r, wave) < p:
+              if debug: print "%c wave ot valid here %f" % (wave, r)
+              return(np.array([-1, 0]))
           V += self.T_Delta_Int(r, p, wave)*dr
           r += dr
           self.list_r.append(r)
