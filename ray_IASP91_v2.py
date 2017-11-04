@@ -7,6 +7,9 @@ RC = 1217.1 # Inner core radius
 # Slowness as function of r
 #
 
+debug = False
+#np.seterr(all='raise')
+
 class Raytrace:
 
     def __init__(self):
@@ -109,7 +112,7 @@ class Raytrace:
         :param convert_to_p_at_core : convert wave to 'P' at outer core boundary: True or False
         """
 
-        print "New function called with wave in %c, wave out %c, must_reach_outer_core %d, reflect_at_outer_core %d, convert_to_p_at_core %d" % (wave, mantel_wave_type, must_reach_outer_core, reflect_at_outer_core, convert_to_p_at_core)
+        if debug: print "New function called with wave in %c, wave out %c, must_reach_outer_core %d, reflect_at_outer_core %d, convert_to_p_at_core %d" % (wave, mantel_wave_type, must_reach_outer_core, reflect_at_outer_core, convert_to_p_at_core)
 
         V = np.array([0., 0.])
         r = RE
@@ -119,37 +122,41 @@ class Raytrace:
         r+= dr*0.5 # move to middle of segment
 
         while(r*self.u(r, wave) > p): # while still going down
+          if reflect_at_outer_core and (r <= RM):
+            if debug: print "reflected at outer core"
+            break
           V += self.T_Delta_Int(r, p, wave)*dr
           r -= dr
           self.list_r.append(r)
           self.list_th.append(V[1])
           self.list_wave.append(wave)
-          if reflect_at_outer_core and (r <= RM):
-            print "reflected at outer core"
-            break
-          if convert_to_p_at_core and (wave == "S") and (r <= RM):
-            wave = "P"
-            print "S wave now entering outer core, converted to %c at %f" % (wave, r)
+          if (wave == "S") and (r <= RM):
+            if convert_to_p_at_core:
+              wave = "P"
+              if debug: print "S wave now entering outer core, converted to %c at %f" % (wave, r)
+            else:
+              if debug: print "ERROR no S wave in outer core"
+              return(np.array([-1, 0]))
           
         if must_reach_outer_core and (r > RM):
-          print "ERROR wave turns back before outer core"
+          if debug: print "ERROR wave turns back before outer core"
           return(np.array([-1, 0]))
 
         r += dr  # gone too far: move back
 
-        print "turned at %f / %f wave type now %c" % (r, RM, wave)
+        if debug: print "turned at %f / %f wave type now %c" % (r, RM, wave)
 
         while(r <= RE):
           if (wave != mantel_wave_type) and (r >= RM):
             wave = mantel_wave_type
-            print "passed through core/mantel boundary wave type now %c at %f" % (wave, r)
+            if debug: print "passed through core/mantel boundary wave type now %c at %f" % (wave, r)
           V += self.T_Delta_Int(r, p, wave)*dr
           r += dr
           self.list_r.append(r)
           self.list_th.append(V[1])
           self.list_wave.append(wave)
           if((wave == "S") and (r < RM)): # no S wave in outer core
-            print "ERROR no S wave in outer core"
+            if debug: print "ERROR no S wave in outer core"
             return(np.array([-1, 0]))
 
         return(V)
@@ -223,6 +230,7 @@ class Raytrace:
 
         th = np.radians(theta)
         p = RE*self.u(RE, wave)*np.sin(th)
+        if debug: print "trajectory path=%s, theta=%f, %f" % (path, theta, p)
 
         if func_to_call == "m":
           T, DeltaP = self.Int(dr, p, wave)
@@ -248,7 +256,7 @@ class Raytrace:
         self.plot_circle(RE, "g")
         self.plot_circle(RM, "m")
         self.plot_circle(RC, "r")
-    
+
         xl = []
         yl = []
         thmax = self.list_th[-1]*0.5 # to generate symmetric figure
@@ -261,11 +269,11 @@ class Raytrace:
             xl.append(self.list_r[x] * np.sin(self.list_th[x] - thmax))
             yl.append(self.list_r[x] * np.cos(self.list_th[x] - thmax))
 ### END MARKING
-        
+
         # select colour
         if(wave == "P") : col = "k"
         else: col = "b"
-        
+
         plt.title(r'$\theta=$'+str(self.theta)+", path="+self.path)
         plt.plot(xl, yl, col)
         plt.axis([-8500, 8500, -6500, 6500], 'equal')
@@ -273,5 +281,29 @@ class Raytrace:
 
         
 ### MARKING coding 3
-    # def plot_multi_trajectory(self, nocircle=False):
+    def plot_multi_trajectory(self, nocircle=False):
+        if nocircle == False:
+          self.plot_circle(RE, "g")
+          self.plot_circle(RM, "m")
+          self.plot_circle(RC, "r")
+
+        xl = []
+        yl = []
+        n = len(self.list_r)         # number of data points
+        wave = self.list_wave[0]     # wave type
+
+### MARKING coding 1
+        # POPULATE xl and yl with data
+        for x in range(0, n-1):
+            xl.append(self.list_r[x] * np.sin(self.list_th[x]))
+            yl.append(self.list_r[x] * np.cos(self.list_th[x]))
+### END MARKING
+
+        # select colour
+        if(wave == "P") : col = "k"
+        else: col = "b"
+
+        plt.title(r"path="+self.path)
+        plt.plot(xl, yl, col)
+        plt.axis([-8500, 8500, -6500, 6500], 'equal')
 ### END MARKING
