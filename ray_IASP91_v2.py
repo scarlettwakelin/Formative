@@ -93,7 +93,7 @@ class Raytrace:
         RU2 = (r * self.u(r, wave)) ** 2
         T = RU2 / (r * (RU2 - (p ** 2) ) ** 0.5)
         D = p / (r * (RU2 - (p ** 2)) ** 0.5)
-        return (T, D)
+        return np.array([T, D])
 ### END MARKING
 
 ### MARKING: coding 2
@@ -112,7 +112,7 @@ class Raytrace:
         :param convert_to_p_at_core : convert wave to 'P' at outer core boundary: True or False
         """
 
-        if debug: print "New function called with wave in %c, wave out %c, must_reach_outer_core %d, reflect_at_outer_core %d, convert_to_p_at_core %d" % (wave, mantel_wave_type, must_reach_outer_core, reflect_at_outer_core, convert_to_p_at_core)
+        if debug: print ("New function called with wave in %c, wave out %c, must_reach_outer_core %d, reflect_at_outer_core %d, convert_to_p_at_core %d" % (wave, mantel_wave_type, must_reach_outer_core, reflect_at_outer_core, convert_to_p_at_core))
 
         V = np.array([0., 0.])
         r = RE
@@ -129,30 +129,30 @@ class Raytrace:
           self.list_wave.append(wave)
           if r <= RM:
             if reflect_at_outer_core:
-              if debug: print "reflected at outer core %f" % r
+              if debug: print ("reflected at outer core %f" % r)
               break
             elif wave == "S":
               if convert_to_p_at_core:
                 wave = "P"
-                if debug: print "S wave now entering outer core, converted to %c at %f" % (wave, r)
+                if debug: print ("S wave now entering outer core, converted to %c at %f" % (wave, r))
               else:
-                if debug: print "ERROR no S wave in outer core %f" % r
+                if debug: print ("ERROR no S wave in outer core %f" % r)
                 return(np.array([-1, 0]))
 
         if must_reach_outer_core and (r > RM):
-          if debug: print "ERROR wave turns back before outer core"
+          if debug: print ("ERROR wave turns back before outer core")
           return(np.array([-1, 0]))
 
         r += dr  # gone too far: move back
 
-        if debug: print "turned at %f / %f wave type now %c" % (r, RM, wave)
+        if debug: print ("turned at %f / %f wave type now %c" % (r, RM, wave))
 
         while(r <= RE):
           if (wave != mantel_wave_type) and (r >= RM):
             wave = mantel_wave_type
-            if debug: print "passed through core/mantel boundary wave type now %c at %f" % (wave, r)
+            if debug: print ("passed through core/mantel boundary wave type now %c at %f" % (wave, r))
             if r*self.u(r, wave) < p:
-              if debug: print "%c wave ot valid here %f" % (wave, r)
+              if debug: print ("%c wave ot valid here %f" % (wave, r))
               return(np.array([-1, 0]))
           V += self.T_Delta_Int(r, p, wave)*dr
           r += dr
@@ -160,7 +160,7 @@ class Raytrace:
           self.list_th.append(V[1])
           self.list_wave.append(wave)
           if((wave == "S") and (r < RM)): # no S wave in outer core
-            if debug: print "ERROR no S wave in outer core"
+            if debug: print ("ERROR no S wave in outer core")
             return(np.array([-1, 0]))
 
         return(V)
@@ -234,7 +234,7 @@ class Raytrace:
 
         th = np.radians(theta)
         p = RE*self.u(RE, wave)*np.sin(th)
-        if debug: print "trajectory path=%s, theta=%f, %f" % (path, theta, p)
+        if debug: print ("trajectory path=%s, theta=%f, %f" % (path, theta, p))
 
         if func_to_call == "m":
           T, DeltaP = self.Int(dr, p, wave)
@@ -245,7 +245,7 @@ class Raytrace:
         elif func_to_call == "mPoSm":
           T, DeltaP = self.Int_mPoSm(dr, p, wave)
         else:
-          print "Failed to understand %s" % func_to_call
+          print ("Failed to understand %s" % func_to_call)
 ### END MARKING
 
         return(T, np.degrees(DeltaP))
