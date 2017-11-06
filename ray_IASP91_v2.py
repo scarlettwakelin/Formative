@@ -5,7 +5,6 @@ RE = 6371.0 # Earth Radius
 RM = 3482.0 # Bottom of mantel radius
 RC = 1217.1 # Inner core radius
 # Slowness as function of r
-#
 
 debug = False
 #np.seterr(all='raise')
